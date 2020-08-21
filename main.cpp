@@ -1,16 +1,14 @@
-
 #include <iostream>
 #include <Windows.h>
 
 
-
-
-// ïîëó÷åíèå êîîðäèíàò êîíñîëè
+//! ÑÐ¿Ð¸ÑÐ¾Ðº Ñ„ÑƒÐ½ÐºÑ†Ð¸Ð¹
+//{
+// Ð¿Ð¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ðµ ÐºÐ¾Ð¾Ñ€Ð´Ð¸Ð½Ð°Ñ‚ ÐºÐ¾Ð½ÑÐ¾Ð»Ð¸
 COORD GetConsoleCursorPosition(HANDLE hConsoleOutput);
-// âûõîä ñ îøèáêîé
+// Ð²Ñ‹Ñ…Ð¾Ð´ Ñ Ð¾ÑˆÐ¸Ð±ÐºÐ¾Ð¹
 VOID ErrorExit(LPSTR);
-
-
+//}
 
 HANDLE hStdin;
 HANDLE hStdout;
@@ -41,16 +39,16 @@ int main()
                 &cNumRead) ) // number of records read
       ErrorExit("ReadConsoleInput");
 
-    // çàùèòà. åñëè íåò íè÷åãî - âîçâðàùàåñÿ ó ÷òåíèþ
+    // Ð·Ð°Ñ‰Ð¸Ñ‚Ð°. ÐµÑÐ»Ð¸ Ð½ÐµÑ‚ Ð½Ð¸Ñ‡ÐµÐ³Ð¾ - Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‰Ð°ÐµÑÑ Ñƒ Ñ‡Ñ‚ÐµÐ½Ð¸ÑŽ
     if(!cNumRead)
       continue;
-    // åñëè ñîáûòèå íå îò êëàâèàòóðû  - ïðîïóñê ñîáûòèÿ
+    // ÐµÑÐ»Ð¸ ÑÐ¾Ð±Ñ‹Ñ‚Ð¸Ðµ Ð½Ðµ Ð¾Ñ‚ ÐºÐ»Ð°Ð²Ð¸Ð°Ñ‚ÑƒÑ€Ñ‹  - Ð¿Ñ€Ð¾Ð¿ÑƒÑÐº ÑÐ¾Ð±Ñ‹Ñ‚Ð¸Ñ
     if(irInBuf.EventType != KEY_EVENT)
       continue;
-    //íå îáðàáàòûâàåì ïîêà êëàâèøà íàæàòà
+    //Ð½Ðµ Ð¾Ð±Ñ€Ð°Ð±Ð°Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ Ð¿Ð¾ÐºÐ° ÐºÐ»Ð°Ð²Ð¸ÑˆÐ° Ð½Ð°Ð¶Ð°Ñ‚Ð°
     if(irInBuf.Event.KeyEvent.bKeyDown)
       continue;
-    // îáðàüîòêà êëàâèøè
+    // Ð¾Ð±Ñ€Ð°ÑŒÐ¾Ñ‚ÐºÐ° ÐºÐ»Ð°Ð²Ð¸ÑˆÐ¸
     switch (irInBuf.Event.KeyEvent.wVirtualKeyCode)
     {
       case VK_UP:
@@ -83,12 +81,12 @@ int main()
       }
       case VK_ESCAPE:
       {
-        flg_loop = false; // âûõîä èç öèêëà
+        flg_loop = false; // Ð²Ñ‹Ñ…Ð¾Ð´ Ð¸Ð· Ñ†Ð¸ÐºÐ»Ð°
         break;
       }
       default:
       {
-        // ïðîâåðÿåì ÷òî ýòî òåêñòîâûé ñèìâîë (à íå ñëóæåáíàÿ êëàâèøà) + îòáðàñûâàåì êèðèëèöó
+        // Ð¿Ñ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼ Ñ‡Ñ‚Ð¾ ÑÑ‚Ð¾ Ñ‚ÐµÐºÑÑ‚Ð¾Ð²Ñ‹Ð¹ ÑÐ¸Ð¼Ð²Ð¾Ð» (Ð° Ð½Ðµ ÑÐ»ÑƒÐ¶ÐµÐ±Ð½Ð°Ñ ÐºÐ»Ð°Ð²Ð¸ÑˆÐ°) + Ð¾Ñ‚Ð±Ñ€Ð°ÑÑ‹Ð²Ð°ÐµÐ¼ ÐºÐ¸Ñ€Ð¸Ð»Ð¸Ñ†Ñƒ
         if (irInBuf.Event.KeyEvent.uChar.AsciiChar >= 32 &&
             irInBuf.Event.KeyEvent.uChar.AsciiChar <= 127 )
         {
