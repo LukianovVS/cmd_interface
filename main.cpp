@@ -1,48 +1,106 @@
-#include <conio.h>
+
 #include <iostream>
 #include <Windows.h>
 
 
-#define KEYBOARD_ARROW -32
-#define KEYBOARD_UP     72
-#define KEYBOARD_DOWN   80
-#define KEYBOARD_LEFT   75
-#define KEYBOARD_RIGHT  77
 
 
-
+// получение координат консоли
 COORD GetConsoleCursorPosition(HANDLE hConsoleOutput);
+// выход с ошибкой
+VOID ErrorExit(LPSTR);
 
 
-void prc_arrow();
-void prc_ch(char ch);
 
-HANDLE hConsole;
+HANDLE hStdin;
+HANDLE hStdout;
 
 int main()
 {
-  hConsole = GetStdHandle(STD_OUTPUT_HANDLE);	  // ѕолучение дескриптора устройства стандартного вывода
-
   bool flg_loop = true;
-  char ch_keyboard;
+
+  INPUT_RECORD irInBuf;
+  DWORD cNumRead;
+
+  hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+  hStdin = GetStdHandle(STD_INPUT_HANDLE);
+  if (hStdin == INVALID_HANDLE_VALUE)
+        ErrorExit("GetStdHandle");
+
+
 
   std::cout << "Hello! I am cmd" << std::endl;
+  std::cout << "  Type Esc to exit" << std::endl;
   do
   {
-    ch_keyboard = _getch();
 
-    switch(ch_keyboard)
+    if (! ReadConsoleInput(
+                hStdin,      // input buffer handle
+                &irInBuf,     // buffer to read into
+                1,           // size of read buffer
+                &cNumRead) ) // number of records read
+      ErrorExit("ReadConsoleInput");
+
+    // защита. если нет ничего - возвращаес€ у чтению
+    if(!cNumRead)
+      continue;
+    // если событие не от клавиатуры  - пропуск событи€
+    if(irInBuf.EventType != KEY_EVENT)
+      continue;
+    //не обрабатываем пока клавиша нажата
+    if(irInBuf.Event.KeyEvent.bKeyDown)
+      continue;
+    // обраьотка клавиши
+    switch (irInBuf.Event.KeyEvent.wVirtualKeyCode)
     {
-      case KEYBOARD_ARROW: prc_arrow(); break;
-      default: prc_ch(ch_keyboard);
+      case VK_UP:
+      {
+        COORD position = GetConsoleCursorPosition(hStdout);
+        position.Y -= 1;
+        SetConsoleCursorPosition(hStdout, position);
+        break;
+      }
+      case VK_DOWN:
+      {
+        COORD position   = GetConsoleCursorPosition(hStdout);
+        position.Y += 1;
+        SetConsoleCursorPosition(hStdout, position);
+        break;
+      }
+      case VK_LEFT:
+      {
+        COORD position   = GetConsoleCursorPosition(hStdout);
+        position.X -= 1;
+        SetConsoleCursorPosition(hStdout, position);
+        break;
+      }
+      case VK_RIGHT:
+      {
+        COORD position   = GetConsoleCursorPosition(hStdout);
+        position.X += 1;
+        SetConsoleCursorPosition(hStdout, position);
+        break;
+      }
+      case VK_ESCAPE:
+      {
+        flg_loop = false; // выход из цикла
+        break;
+      }
+      default:
+      {
+        // провер€ем что это текстовый символ (а не служебна€ клавиша) + отбрасываем кирилицу
+        if (irInBuf.Event.KeyEvent.uChar.AsciiChar >= 32 &&
+            irInBuf.Event.KeyEvent.uChar.AsciiChar <= 127 )
+        {
+          std::cout << irInBuf.Event.KeyEvent.uChar.AsciiChar;
+        }
+
+        break;
+      }
     }
 
 
-  }while(flg_loop);
-
-
-//  position = GetConsoleCursorPosition(hConsole);
-//  std::cout << position.X << " " << position.Y << std::endl;
+  } while(flg_loop);
 
   return 0;
 }
@@ -65,23 +123,11 @@ COORD GetConsoleCursorPosition(HANDLE hConsoleOutput)
 }
 
 
-void prc_arrow()
+VOID ErrorExit (LPSTR lpszMessage)
 {
-  char ch_keyboard = _getch();
-  COORD position   = GetConsoleCursorPosition(hConsole);
+    fprintf(stderr, "%s\n", lpszMessage);
 
-  switch(ch_keyboard)
-  {
-    case KEYBOARD_UP:   position.Y -= 1; break;
-    case KEYBOARD_DOWN: position.Y += 1; break;
-    case KEYBOARD_LEFT: position.X -= 1; break;
-    case KEYBOARD_RIGHT: position.X += 1; break;
-  }
-  SetConsoleCursorPosition(hConsole, position);		// ѕеремещение каретки по заданным координатам
+    ExitProcess(0);
 }
 
-void prc_ch(char ch)
-{
-  std::cout<< ch;
-}
 
