@@ -54,8 +54,8 @@ int main()
     // если событие не от клавиатуры  - пропуск события
     if(irInBuf.EventType != KEY_EVENT)
       continue;
-    //не обрабатываем пока клавиша нажата
-    if(irInBuf.Event.KeyEvent.bKeyDown)
+    //не обрабатываем пока клавиша нажата. Исключение - нажат shift
+    if(irInBuf.Event.KeyEvent.bKeyDown && !(irInBuf.Event.KeyEvent.dwControlKeyState & ( SHIFT_PRESSED) ))
       continue;
     // обраьотка клавиши
     switch (irInBuf.Event.KeyEvent.wVirtualKeyCode)
@@ -101,8 +101,10 @@ int main()
       default:
       {
         // проверяем что это текстовый символ (а не служебная клавиша) + отбрасываем кирилицу
-        if (irInBuf.Event.KeyEvent.uChar.AsciiChar >= 32 &&
-            irInBuf.Event.KeyEvent.uChar.AsciiChar <= 127 )
+        bool flg_std_ch = irInBuf.Event.KeyEvent.uChar.AsciiChar >= 32 && irInBuf.Event.KeyEvent.uChar.AsciiChar <= 127;
+        // проверяем ввод заглавных букв с помощью shift
+        bool flg_shift_ch = false;
+        if ( flg_std_ch || flg_shift_ch)
         {
           position   = GetConsoleCursorPosition(hStdout);
           int i = position.X - pos_X_min;
