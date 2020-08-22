@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <Windows.h>
 
 
@@ -8,35 +9,39 @@
 COORD GetConsoleCursorPosition(HANDLE hConsoleOutput);
 // выход с ошибкой
 VOID ErrorExit(LPSTR);
+// обработка ini файла со списком команд
+void init_prj(char f_ini[], HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min);
 //}
 
-HANDLE hStdin;
-HANDLE hStdout;
 
-int main()
+
+int main(int argc, char *argv[])
 {
-  int pos_X_min = 2;         // отступ от начала строки
-  COORD position;            // позиция на консоли
-  bool flg_loop = true;
-  std::string cmd_str = "";
+  int pos_X_min = 2;          // отступ от начала строки
+  COORD position;             // позиция на консоли
+  bool flg_loop = true;       // программа работает в цикле до сброса флага
+  std::string cmd_str = "";   // строка с введеной командой
+  HANDLE hStdin;              // устройство stdin
+  HANDLE hStdout;             // устройство stdout
+  INPUT_RECORD irInBuf;       // Класс для обработки событий. В данном случае, для обработки событий с клавиатуры
+  DWORD cNumRead;             // Сюда будет записано кол-во принятых событий
+
+//  // Инициализация проекта
+//  if (argc != 2)
+//  {
+//    std::cerr << "The file with the list of commands is not specified\n";
+//    return 1;
+//  }
+  // В ручом режиме подставляем файл с примером
+  std::string f_ini = argv[0];
+  int i = f_ini.rfind("\\bin\\", f_ini.length());
+  f_ini.erase(f_ini.begin() + i + 1, f_ini.end());
+  f_ini += "\\example\\example.ini";
+  //
+  init_prj(&f_ini[0], hStdin, hStdout, pos_X_min);
 
 
-  INPUT_RECORD irInBuf;
-  DWORD cNumRead;
 
-  hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-  hStdin = GetStdHandle(STD_INPUT_HANDLE);
-  if (hStdin == INVALID_HANDLE_VALUE)
-        ErrorExit("GetStdHandle");
-
-
-
-  std::cout << "Hello! I am cmd" << std::endl;
-  std::cout << "  Type Esc to exit" << std::endl;
-
-  position   = GetConsoleCursorPosition(hStdout);
-  position.X = pos_X_min;
-  SetConsoleCursorPosition(hStdout, position);
 
   do
   {
@@ -70,7 +75,7 @@ int main()
         // TODO: DOWN log prc
         break;
       }
-      case VK_LEFT:
+      case VK_LEFT: // перемещение по строке влево
       {
         position   = GetConsoleCursorPosition(hStdout);
         if(position.X > pos_X_min )
@@ -80,7 +85,7 @@ int main()
         }
         break;
       }
-      case VK_RIGHT:
+      case VK_RIGHT: // перемещение по строке вправо
       {
         position   = GetConsoleCursorPosition(hStdout);
         if (position.X < (cmd_str.length() + pos_X_min))
@@ -90,7 +95,7 @@ int main()
         }
         break;
       }
-      case VK_ESCAPE:
+      case VK_ESCAPE: // выход из прошраммы
       {
         flg_loop = false; // выход из цикла
         break;
@@ -100,7 +105,7 @@ int main()
         // TODO: tab prc
         break;
       }
-      case VK_BACK:
+      case VK_BACK: // удаляем 1 символ
       {
         position = GetConsoleCursorPosition(hStdout);
         int i = position.X - pos_X_min - 1;
@@ -111,13 +116,10 @@ int main()
           SetConsoleCursorPosition(hStdout, position);
           std::cout << &cmd_str[i] << " ";
           SetConsoleCursorPosition(hStdout, position);
-
         }
-
-
         break;
       }
-      case VK_DELETE:
+      case VK_DELETE: // удаляем всё строку
       {
         std::string str_clr(cmd_str.length(), ' ');
         position   = GetConsoleCursorPosition(hStdout);
@@ -132,7 +134,7 @@ int main()
 
         break;
       }
-      case VK_RETURN: // Enter
+      case VK_RETURN: // Enter. Обрабатываем введенные данные
       {
         position   = GetConsoleCursorPosition(hStdout);
         position.X = 0;
@@ -148,7 +150,7 @@ int main()
         SetConsoleCursorPosition(hStdout, position);
         break;
       }
-      default:
+      default: // для нового символа строки
       {
         // проверяем что это текстовый символ (а не служебная клавиша) + отбрасываем кирилицу
         if ( irInBuf.Event.KeyEvent.uChar.AsciiChar >= 32 && irInBuf.Event.KeyEvent.uChar.AsciiChar <= 127)
@@ -198,11 +200,40 @@ COORD GetConsoleCursorPosition(HANDLE hConsoleOutput)
 }
 
 
-VOID ErrorExit (LPSTR lpszMessage)
+VOID ErrorExit (char err_msg[])
 {
-    fprintf(stderr, "%s\n", lpszMessage);
-
-    ExitProcess(0);
+  std::cerr << err_msg;
+  exit(1);
 }
 
+
+
+void init_prj(char f_ini[], HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min)
+{
+  std::ifstream fid(f_ini, std::ifstream::in);
+  if (!fid.is_open())
+  {
+    std::string str_err = "Error: open ini file: '";
+    str_err += f_ini;
+    str_err += "'";
+    ErrorExit(&str_err[0]);
+  }
+  // TODO: прочитать файл и составить славарь {имя команды: обрабочик команды}
+  fid.close();
+  pos_X_min = 2;
+
+  hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+  hStdin = GetStdHandle(STD_INPUT_HANDLE);
+  if (hStdin == INVALID_HANDLE_VALUE)
+    ErrorExit("GetStdHandle");
+
+
+
+  std::cout << "Hello! I am cmd" << std::endl;
+  std::cout << "  Type Esc to exit" << std::endl;
+
+  COORD position   = GetConsoleCursorPosition(hStdout);
+  position.X = pos_X_min;
+  SetConsoleCursorPosition(hStdout, position);
+}
 
