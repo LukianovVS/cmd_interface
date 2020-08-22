@@ -102,7 +102,19 @@ int main()
       }
       case VK_BACK:
       {
-        // TODO: BACK prc
+        position = GetConsoleCursorPosition(hStdout);
+        int i = position.X - pos_X_min - 1;
+        if (i >= 0)
+        {
+          cmd_str.erase(cmd_str.begin() + i);
+          position.X -= 1;
+          SetConsoleCursorPosition(hStdout, position);
+          std::cout << &cmd_str[i] << " ";
+          SetConsoleCursorPosition(hStdout, position);
+
+        }
+
+
         break;
       }
       case VK_DELETE:
