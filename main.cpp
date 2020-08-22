@@ -15,7 +15,11 @@ HANDLE hStdout;
 
 int main()
 {
+  int pos_X_min = 2; // отступ от начала строки
+  COORD position; // позиция на консоли
   bool flg_loop = true;
+  std::string cmd_str = "";
+
 
   INPUT_RECORD irInBuf;
   DWORD cNumRead;
@@ -29,6 +33,11 @@ int main()
 
   std::cout << "Hello! I am cmd" << std::endl;
   std::cout << "  Type Esc to exit" << std::endl;
+
+  position   = GetConsoleCursorPosition(hStdout);
+  position.X = pos_X_min;
+  SetConsoleCursorPosition(hStdout, position);
+
   do
   {
 
@@ -53,35 +62,40 @@ int main()
     {
       case VK_UP:
       {
-        COORD position = GetConsoleCursorPosition(hStdout);
-        position.Y -= 1;
-        SetConsoleCursorPosition(hStdout, position);
         break;
       }
       case VK_DOWN:
       {
-        COORD position   = GetConsoleCursorPosition(hStdout);
-        position.Y += 1;
-        SetConsoleCursorPosition(hStdout, position);
         break;
       }
       case VK_LEFT:
       {
-        COORD position   = GetConsoleCursorPosition(hStdout);
-        position.X -= 1;
-        SetConsoleCursorPosition(hStdout, position);
+        position   = GetConsoleCursorPosition(hStdout);
+        if(position.X > pos_X_min )
+        {
+          position.X -= 1;
+          SetConsoleCursorPosition(hStdout, position);
+        }
         break;
       }
       case VK_RIGHT:
       {
-        COORD position   = GetConsoleCursorPosition(hStdout);
-        position.X += 1;
-        SetConsoleCursorPosition(hStdout, position);
+        position   = GetConsoleCursorPosition(hStdout);
+        if (position.X < (cmd_str.length() + pos_X_min))
+        {
+          position.X += 1;
+          SetConsoleCursorPosition(hStdout, position);
+        }
         break;
       }
       case VK_ESCAPE:
       {
         flg_loop = false; // выход из цикла
+        break;
+      }
+      case VK_TAB:
+      {
+
         break;
       }
       default:
@@ -90,7 +104,21 @@ int main()
         if (irInBuf.Event.KeyEvent.uChar.AsciiChar >= 32 &&
             irInBuf.Event.KeyEvent.uChar.AsciiChar <= 127 )
         {
-          std::cout << irInBuf.Event.KeyEvent.uChar.AsciiChar;
+          position   = GetConsoleCursorPosition(hStdout);
+          int i = position.X - pos_X_min;
+          if (i < cmd_str.length())
+          {
+            cmd_str.insert(i, 1, irInBuf.Event.KeyEvent.uChar.AsciiChar);
+          }
+          else
+          {
+            cmd_str.push_back(irInBuf.Event.KeyEvent.uChar.AsciiChar);
+          }
+          // всё что было левее нового символа - остается. Переписываем строку начиная с нового символа и до конца строки
+          std::cout << &cmd_str[i];
+          // возвращаем курсор с конца строки на место гд пишет пользователь
+          position.X = pos_X_min + i + 1;
+          SetConsoleCursorPosition(hStdout, position);
         }
 
         break;
