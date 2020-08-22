@@ -15,8 +15,8 @@ HANDLE hStdout;
 
 int main()
 {
-  int pos_X_min = 2; // отступ от начала строки
-  COORD position; // позиция на консоли
+  int pos_X_min = 2;         // отступ от начала строки
+  COORD position;            // позиция на консоли
   bool flg_loop = true;
   std::string cmd_str = "";
 
@@ -55,17 +55,19 @@ int main()
     if(irInBuf.EventType != KEY_EVENT)
       continue;
     //не обрабатываем пока клавиша нажата. Исключение - нажат shift
-    if(irInBuf.Event.KeyEvent.bKeyDown && !(irInBuf.Event.KeyEvent.dwControlKeyState & ( SHIFT_PRESSED) ))
+    if(irInBuf.Event.KeyEvent.bKeyDown && !(irInBuf.Event.KeyEvent.dwControlKeyState & ( SHIFT_PRESSED) ) )
       continue;
-    // обраьотка клавиши
+    // обраротка клавиши, на основе чтения таблицы "Virtual-Key Codes"
     switch (irInBuf.Event.KeyEvent.wVirtualKeyCode)
     {
       case VK_UP:
       {
+        // TODO: UP log prc
         break;
       }
       case VK_DOWN:
       {
+        // TODO: DOWN log prc
         break;
       }
       case VK_LEFT:
@@ -95,16 +97,49 @@ int main()
       }
       case VK_TAB:
       {
+        // TODO: tab prc
+        break;
+      }
+      case VK_BACK:
+      {
+        // TODO: BACK prc
+        break;
+      }
+      case VK_DELETE:
+      {
+        std::string str_clr(cmd_str.length(), ' ');
+        position   = GetConsoleCursorPosition(hStdout);
+        position.X = pos_X_min;
+        SetConsoleCursorPosition(hStdout, position);
 
+        std::cout << str_clr;
+        position.X = pos_X_min;
+        SetConsoleCursorPosition(hStdout, position);
+
+        cmd_str.clear();
+
+        break;
+      }
+      case VK_RETURN: // Enter
+      {
+        position   = GetConsoleCursorPosition(hStdout);
+        position.X = 0;
+        position.Y += 1;
+        SetConsoleCursorPosition(hStdout, position);
+
+        std::cout << "Yout string: '" << cmd_str << "'" << std::endl;
+        cmd_str.clear();
+
+        position   = GetConsoleCursorPosition(hStdout);
+        position.X = pos_X_min;
+        position.Y += 1;
+        SetConsoleCursorPosition(hStdout, position);
         break;
       }
       default:
       {
         // проверяем что это текстовый символ (а не служебная клавиша) + отбрасываем кирилицу
-        bool flg_std_ch = irInBuf.Event.KeyEvent.uChar.AsciiChar >= 32 && irInBuf.Event.KeyEvent.uChar.AsciiChar <= 127;
-        // проверяем ввод заглавных букв с помощью shift
-        bool flg_shift_ch = false;
-        if ( flg_std_ch || flg_shift_ch)
+        if ( irInBuf.Event.KeyEvent.uChar.AsciiChar >= 32 && irInBuf.Event.KeyEvent.uChar.AsciiChar <= 127)
         {
           position   = GetConsoleCursorPosition(hStdout);
           int i = position.X - pos_X_min;
