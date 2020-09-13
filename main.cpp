@@ -1,3 +1,5 @@
+#include "cls_cmd_list.h"
+
 #include <iostream>
 #include <fstream>
 #include <Windows.h>
@@ -9,8 +11,8 @@
 COORD GetConsoleCursorPosition(HANDLE hConsoleOutput);
 // выход с ошибкой
 VOID ErrorExit(LPSTR);
-// обработка ini файла со списком команд
-void init_prj(char f_ini[], HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min);
+// Конфигурация проекта
+void init_prj(std::string *f_ini, std::string *cmd_path, int *Num_cmd, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min);
 //}
 
 
@@ -26,21 +28,21 @@ int main(int argc, char *argv[])
   INPUT_RECORD irInBuf;       // Класс для обработки событий. В данном случае, для обработки событий с клавиатуры
   DWORD cNumRead;             // Сюда будет записано кол-во принятых событий
 
-//  // Инициализация проекта
-//  if (argc != 2)
-//  {
-//    std::cerr << "The file with the list of commands is not specified\n";
-//    return 1;
-//  }
+
+
+
   // В ручом режиме подставляем файл с примером
-  std::string f_ini = argv[0];
-  int i = f_ini.rfind("\\bin\\", f_ini.length());
-  f_ini.erase(f_ini.begin() + i + 1, f_ini.end());
-  f_ini += "\\example\\example.ini";
-  //
-  init_prj(&f_ini[0], hStdin, hStdout, pos_X_min);
+  if (argc != 2)
+  {
+    std::cerr << "ERROR: configuration file required" << std::endl;
+    return 1;
+  }
 
-
+  std::string f_ini(argv[1]);       // сохраняем путь к ini файлу (файл со списком команд)
+  std::string cmd_path("");         // путь, относительно которых заданы команды в ini файле
+  int Num_cmd = 0;                  // кол-во команд
+  // initialization
+  init_prj(&f_ini, &cmd_path, &Num_cmd, hStdin, hStdout, pos_X_min);
 
 
   do
@@ -134,14 +136,40 @@ int main(int argc, char *argv[])
 
         break;
       }
-      case VK_RETURN: // Enter. Обрабатываем введенные данные
+      case VK_RETURN: // (Enter). Обрабатываем введенные данные
       {
         position   = GetConsoleCursorPosition(hStdout);
         position.X = 0;
         position.Y += 1;
         SetConsoleCursorPosition(hStdout, position);
 
+        for (int i = 0; i < Num_cmd; i++)
+        {
+          std::string cmd_section("cmd ");
+          cmd_section += std::to_string(i + 1);
+          const int buff_size = 200;
+          char buff[buff_size];
+          GetPrivateProfileString(cmd_section.c_str(), "name", "", buff, buff_size, f_ini.c_str());
+
+          if(!strcmp(buff, cmd_str.c_str()))
+          {
+            GetPrivateProfileString(cmd_section.c_str(), "comand", "", buff, buff_size, f_ini.c_str());
+            std::string system_cmd(cmd_path);
+            std::cout << "cmd: " << system_cmd << std::endl;
+            std::cout << "buff: " << buff << std::endl;
+            system_cmd.append(buff);
+            std::cout << "cmd: " << system_cmd << std::endl;
+//            system_cmd.append(buff);
+//            std::cout << "cmd: " << system_cmd << std::endl;
+            system(system_cmd.c_str());
+          }
+
+
+
+        }
         std::cout << "Yout string: '" << cmd_str << "'" << std::endl;
+
+//        system("");
         cmd_str.clear();
 
         position   = GetConsoleCursorPosition(hStdout);
@@ -208,18 +236,34 @@ VOID ErrorExit (char err_msg[])
 
 
 
-void init_prj(char f_ini[], HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min)
+void init_prj(std::string *f_ini, std::string *cmd_path, int *Num_cmd, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min)
 {
-  std::ifstream fid(f_ini, std::ifstream::in);
-  if (!fid.is_open())
+
+  // все команды заданы относительно ini файла (dbg).
+  int i = f_ini->find_last_of('/\\');
+  cmd_path->append(".\\");
+  cmd_path->append(*f_ini, 0, i + 1);
+
+  // Получаем кол-во секций в ini файле.
+  const int size_buff = 200;
+  char buff[size_buff + 1];             // все секции будут записаны в этот буфер
+  int N = GetPrivateProfileSectionNames(buff, size_buff, f_ini->c_str());
+  for (int i = 0; i < N; i++)
   {
-    std::string str_err = "Error: open ini file: '";
-    str_err += f_ini;
-    str_err += "'";
-    ErrorExit(&str_err[0]);
+    if (buff[i] == '\0')        // все секции разделены в буфере символом конца строки. Есть новый символ конца строки -> счетчик кол-ва секций++
+      (*Num_cmd)++;
   }
-  // TODO: прочитать файл и составить славарь {имя команды: обрабочик команды}
-  fid.close();
+
+  // первая секция - спецификация
+  (*Num_cmd)--;
+
+  // dbg info:
+  std::cout << "f ini: " << f_ini->c_str()    << std::endl;
+  std::cout << "path:  " << cmd_path->c_str() << std::endl;
+  std::cout << "Num cmd:  " << *Num_cmd << std::endl;
+
+
+
   pos_X_min = 2;
 
   hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -231,6 +275,7 @@ void init_prj(char f_ini[], HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min)
 
   std::cout << "Hello! I am cmd" << std::endl;
   std::cout << "  Type Esc to exit" << std::endl;
+
 
   COORD position   = GetConsoleCursorPosition(hStdout);
   position.X = pos_X_min;
