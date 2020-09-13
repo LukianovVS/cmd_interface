@@ -143,33 +143,59 @@ int main(int argc, char *argv[])
         position.Y += 1;
         SetConsoleCursorPosition(hStdout, position);
 
-        for (int i = 0; i < Num_cmd; i++)
+        // введенная строка содержит имя команды и аргументы (опционно).
+        // их надо разделить и опбраьатывать отдельно. Конец имени команды совпадает с первым пробелом.
+        int i = cmd_str.find_first_of(' ');
+        std::string comand_name("");
+        std::string comand_args("");
+        if (i == std::string::npos)                         // если пробел не найден - то каманда без аргументов
         {
-          std::string cmd_section("cmd ");
-          cmd_section += std::to_string(i + 1);
-          const int buff_size = 200;
-          char buff[buff_size];
-          GetPrivateProfileString(cmd_section.c_str(), "name", "", buff, buff_size, f_ini.c_str());
+          comand_name.append(cmd_str);
+        }
+        else                                               // разделяем имя команды и аргументы
+        {
+          comand_name.append(cmd_str, 0, i);
+          // аргументы копируем вместе с пробелом
+          comand_args.append(cmd_str, i, cmd_str.length() - i);
+        }
 
-          if(!strcmp(buff, cmd_str.c_str()))
+        std::cout << "cmd: "<<comand_name<< std::endl;
+        std::cout << "arg: "<<comand_args<< std::endl;
+
+        bool f_cmd_found = false;                           // признак того, что введенная команда найдена
+        for (int i = 0; i < Num_cmd; i++)                   // бежим по списку команд
+        {
+          std::string cmd_section("cmd ");                  // формируем имя следующей секции для поиска команды
+          cmd_section += std::to_string(i + 1);
+          const int buff_size = 200;                        // инициализируем буфер, в который будем складывать результаты поиска
+          char buff[buff_size];
+          // дастаем имя команды из cmd X
+          GetPrivateProfileString(cmd_section.c_str(), "name", "", buff, buff_size, f_ini.c_str());
+          // сравневаем полученное имя с тем, что ввел пользователь
+          if ( strlen(buff) == comand_name.length() && !strcmp(buff, comand_name.c_str()) )
           {
+            // достаем путь к исполняемому файлу, который вызывает введенная команда
             GetPrivateProfileString(cmd_section.c_str(), "comand", "", buff, buff_size, f_ini.c_str());
             std::string system_cmd(cmd_path);
             std::cout << "cmd: " << system_cmd << std::endl;
             std::cout << "buff: " << buff << std::endl;
             system_cmd.append(buff);
             std::cout << "cmd: " << system_cmd << std::endl;
-//            system_cmd.append(buff);
-//            std::cout << "cmd: " << system_cmd << std::endl;
+            system_cmd.append(comand_args);
+            std::cout << "cmd: " << system_cmd << std::endl;
             system(system_cmd.c_str());
+            f_cmd_found = true;
+            break;
           }
-
-
-
         }
-        std::cout << "Yout string: '" << cmd_str << "'" << std::endl;
 
-//        system("");
+        if (f_cmd_found == false)
+        {
+          // TODO: надо обработь отсуствие команды более серьёзно
+          std::cout << "yuar comand don't found: '" << cmd_str << "'" << std::endl;
+        }
+
+
         cmd_str.clear();
 
         position   = GetConsoleCursorPosition(hStdout);
