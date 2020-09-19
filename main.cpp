@@ -104,7 +104,34 @@ int main(int argc, char *argv[])
       }
       case VK_TAB:
       {
-        // TODO: tab prc
+        // TODO: Сейчас обработка происходит не очень красиво. Надо:
+        // 1. выводить разные варианты комант при нажитии tab несколько раз подряд
+        // 2. выводить подсказку если строка пустая
+        // 3. Т.к. обработчик очень схож с тем, что происходит при нажатии Enter надо создать общую функцию
+        static int i_find = Num_cmd;
+        int strLen = cmd_str.length();
+        for (int i = 0; i < Num_cmd; i++)
+        {
+          i_find++;
+          if (i_find >= Num_cmd)
+            i_find -= Num_cmd;
+          std::string cmd_section("cmd ");                  // формируем имя следующей секции для поиска команды
+          cmd_section += std::to_string(i_find + 1);
+          const int buff_size = 200;                        // инициализируем буфер, в который будем складывать результаты поиска
+          char buff[buff_size];
+          // дастаем имя команды из cmd X
+          GetPrivateProfileString(cmd_section.c_str(), "name", "", buff, buff_size, f_ini.c_str());
+          // сравневаем полученное имя с тем, что ввел пользователь
+          if ( !strncmp(buff, cmd_str.c_str(), strLen) )
+          {
+            if (strlen(buff) > strLen)
+            {
+              cmd_str.append(&buff[strLen]);
+              std::cout << &buff[strLen];
+              break;
+            }
+          }
+        }
         break;
       }
       case VK_BACK: // удаляем 1 символ
