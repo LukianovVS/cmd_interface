@@ -37,7 +37,8 @@ bool func_cmptoini(CMD_LIST a, CMD_LIST b)
 
 CMD_HANDLER::CMD_HANDLER()
 {
-  Ncmd = 0;
+  Ncmd  = 0;
+  i_cmd = 0;
 }
 
 CMD_HANDLER::~CMD_HANDLER()
@@ -68,8 +69,10 @@ bool CMD_HANDLER::findCmd(int * const ind, const std::string * const cmd_mask, b
     this->i_cmd = 0;
 
 
-  for ( ; this->i_cmd < this->Ncmd; this->i_cmd++)
+  for ( int i = 0 ; i < this->Ncmd; i++, this->i_cmd++)
   {
+    if (this->i_cmd >= this->Ncmd)
+      this->i_cmd -= this->Ncmd;
     int ind_cmp = cmd_mask->compare(0, lenmask, this->cmd[this->i_cmd].name.c_str(), lenmask);
 
     if (  ind_cmp == 0 )
@@ -83,7 +86,7 @@ bool CMD_HANDLER::findCmd(int * const ind, const std::string * const cmd_mask, b
       }
     }
   }
-  this->i_cmd++; // на случай, если в следующем заходе надо будет проболжить поиск, то мы начнем его с нуля
+  this->i_cmd = 0; // на случай, если в следующем заходе надо будет проболжить поиск, то мы начнем его с нуля
   return false;
 }
 
@@ -100,9 +103,16 @@ bool CMD_HANDLER::findToLegend(int * const ind, const std::string * const *cmd_m
 }
 
 //! Запуск команды c индексом (номером) ind. \Соотвествующий индекс можно получить в findCmd
-void CMD_HANDLER::callCmd(const int ind)
+void CMD_HANDLER::callCmd(const int ind, std::string *args)
 {
-
+  if ( ind > 0 && ind < this->Ncmd)
+  {
+    std::string os(this->cmd[ind].call.c_str());
+    os.append(" ");
+    os.append(args->c_str());
+    system(os.c_str());
+  }
+  this->i_cmd = 0;
 }
 
 /*! Инициализация полей "name", "cmd", "help"
@@ -157,7 +167,7 @@ bool CMD_HANDLER::init(const std::string * const f_ini)
   for (int i = 0; i < 5; i++)
   {
     int a = -1;
-    this->findCmd(&a, &tmp, true, true);
+    this->findCmd(&a, &tmp, false, true);
     std::cout << i << ": " << a <<std::endl;
   }
 

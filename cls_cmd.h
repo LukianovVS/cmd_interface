@@ -49,7 +49,7 @@ class CMD_HANDLER
     bool findToLegend(int * const ind, const std::string * const *cmd_mask, bool compliteCoincidence, bool continueFind);
 
     //! Запуск команды c индексом (номером) ind. \Соотвествующий индекс можно получить в findCmd
-    void callCmd(const int ind);
+    void callCmd(const int ind, std::string *args);
 
     /*! Инициализация полей "name", "cmd", "help"
      */
