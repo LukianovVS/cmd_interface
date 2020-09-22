@@ -1,7 +1,8 @@
-#include "cls_cmd_list.h"
+#include "cls_cmd.h"
 
 #include <iostream>
 #include <fstream>
+#include <cmath>
 #include <Windows.h>
 
 
@@ -10,9 +11,20 @@
 // получение координат консоли
 COORD GetConsoleCursorPosition(HANDLE hConsoleOutput);
 // выход с ошибкой
-VOID ErrorExit(LPSTR);
+VOID ErrorExit(const char * const);
 // Конфигурация проекта
 void init_prj(std::string *f_ini, std::string *cmd_path, int *Num_cmd, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min);
+/* сравнить строку (введенную пользователем) с командой номер i.
+ * return значение strncmp, полученное при сравнении первых pstr->length() символов строки и команды номер i
+*/
+int strcmdncmp(const std::string * const pstr, const int i, const std::string * const pfname);
+// Получить кол-во цифр десятичного числа
+int nDig(int N)
+{
+  return (N == 0) ? 1 : log10(abs(N)) + 1;
+}
+
+//}
 //}
 
 
@@ -37,6 +49,9 @@ int main(int argc, char *argv[])
     std::cerr << "ERROR: configuration file required" << std::endl;
     return 1;
   }
+
+  // TODO (#1) ини файл надо прочесть 1 раз и на его основе создать упорядоченный список команд. Упорядоченный список бужет полезен при обработке клавиши tab
+  // Для того ухоодим в ветку девелоп
 
   std::string f_ini(argv[1]);       // сохраняем путь к ini файлу (файл со списком команд)
   std::string cmd_path("");         // путь, относительно которых заданы команды в ini файле
@@ -69,12 +84,12 @@ int main(int argc, char *argv[])
     {
       case VK_UP:
       {
-        // TODO: UP log prc
+        // TODO (#6) UP log prc
         break;
       }
       case VK_DOWN:
       {
-        // TODO: DOWN log prc
+        // TODO(#6) DOWN log prc
         break;
       }
       case VK_LEFT: // перемещение по строке влево
@@ -104,7 +119,7 @@ int main(int argc, char *argv[])
       }
       case VK_TAB:
       {
-        // TODO: Сейчас обработка происходит не очень красиво. Надо:
+        // TODO (#3): Сейчас обработка VK_TAB происходит не очень красиво. Надо:
         // 1. выводить разные варианты комант при нажитии tab несколько раз подряд
         // 2. выводить подсказку если строка пустая
         // 3. Т.к. обработчик очень схож с тем, что происходит при нажатии Enter надо создать общую функцию
@@ -218,7 +233,7 @@ int main(int argc, char *argv[])
 
         if (f_cmd_found == false)
         {
-          // TODO: надо обработь отсуствие команды более серьёзно
+          // TODO (#5): надо обработь отсуствие команды более серьёзно
           std::cout << "yuar comand don't found: '" << cmd_str << "'" << std::endl;
         }
 
@@ -281,7 +296,7 @@ COORD GetConsoleCursorPosition(HANDLE hConsoleOutput)
 }
 
 
-VOID ErrorExit (char err_msg[])
+VOID ErrorExit (const char * const err_msg)
 {
   std::cerr << err_msg;
   exit(1);
@@ -310,6 +325,8 @@ void init_prj(std::string *f_ini, std::string *cmd_path, int *Num_cmd, HANDLE &h
   // первая секция - спецификация
   (*Num_cmd)--;
 
+  cmd_handler.init(f_ini);
+
   // dbg info:
   std::cout << "f ini: " << f_ini->c_str()    << std::endl;
   std::cout << "path:  " << cmd_path->c_str() << std::endl;
@@ -334,4 +351,30 @@ void init_prj(std::string *f_ini, std::string *cmd_path, int *Num_cmd, HANDLE &h
   position.X = pos_X_min;
   SetConsoleCursorPosition(hStdout, position);
 }
+
+
+
+/* сравнить строку (введенную пользователем) с командой номер i.
+ * return значение strncmp, полученное при сравнении первых pstr->length() символов строки и команды номер i
+*/
+int strcmdncmp(const std::string * const pstr, const int i, const std::string * const pfname)
+{
+  const int size_of_arr = 20;  //
+  // Проверка на прохождение ограничения на максимальный номер команды. 5 - это на 'c', 'm', 'd', ' ', '\0'.
+  if (  nDig(i) <  (size_of_arr - 5) )  // мне кажется, что проверка лишняя. 1e15 - 1 команд вполне хватит для всего... Пусть пока останется.
+  {
+    ErrorExit("call strcmdncmp");
+  }
+
+  char cmd_section[size_of_arr];
+  sprintf(cmd_section, "cmd %d", i);  // формируем следующей секции для поиска команды
+
+  const int buff_size = 200;                        // инициализируем буфер, в который будем складывать результаты поиска
+  char buff[buff_size];
+  // дастаем имя команды из cmd X
+  GetPrivateProfileString(cmd_section, "name", "", buff, buff_size, pfname->c_str());
+
+  return strncmp(buff, pstr->c_str(), pstr->length());
+}
+
 

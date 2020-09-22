@@ -36,8 +36,8 @@
 			<Add option="-fexceptions" />
 			<Add option="-std=c++11" />
 		</Compiler>
-		<Unit filename="cls_cmd_list.cpp" />
-		<Unit filename="cls_cmd_list.h" />
+		<Unit filename="cls_cmd.cpp" />
+		<Unit filename="cls_cmd.h" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<lib_finder disable_auto="1" />
