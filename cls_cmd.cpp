@@ -59,9 +59,32 @@ bool CMD_HANDLER::findstr(int * const ind, const std::string * const *cmd_mask, 
  * continueFind - продолжить поиск (true), или начать сначала (false)
  * return - true если найдена команда, которая удовлетворяет маске
  */
-bool CMD_HANDLER::findCmd(int * const ind, const std::string * const *cmd_mask, bool continueFind)
+bool CMD_HANDLER::findCmd(int * const ind, const std::string * const cmd_mask, bool compliteCoincidence, bool continueFind)
 {
+  bool retval = false;
+  size_t lenmask = cmd_mask->length();
 
+  if (continueFind == false)
+    this->i_cmd = 0;
+
+
+  for ( ; this->i_cmd < this->Ncmd; this->i_cmd++)
+  {
+    int ind_cmp = cmd_mask->compare(0, lenmask, this->cmd[this->i_cmd].name.c_str(), lenmask);
+
+    if (  ind_cmp == 0 )
+    {
+      if ( (compliteCoincidence && lenmask == this->cmd[this->i_cmd].name.length() ) || !compliteCoincidence)
+      {
+        retval = true;
+        *ind = this->i_cmd;
+        this->i_cmd++; // на случай, если в следующем заходе надо будет проболжить поиск, то мы продолжим со следующего эл-та
+        return true;
+      }
+    }
+  }
+  this->i_cmd++; // на случай, если в следующем заходе надо будет проболжить поиск, то мы начнем его с нуля
+  return false;
 }
 
 
@@ -71,7 +94,7 @@ bool CMD_HANDLER::findCmd(int * const ind, const std::string * const *cmd_mask, 
  * continueFind - продолжить поиск (true), или начать сначала (false)
  * return - true если найдена команда, которая удовлетворяет маске
  */
-bool CMD_HANDLER::findToLegend(int * const ind, const std::string * const *cmd_mask, bool continueFind)
+bool CMD_HANDLER::findToLegend(int * const ind, const std::string * const *cmd_mask, bool compliteCoincidence, bool continueFind)
 {
 
 }
@@ -129,12 +152,13 @@ bool CMD_HANDLER::init(const std::string * const f_ini)
   for (int i = 0; i < this->Ncmd; i++)
     std::cout << i << ": " << this->cmd[i].name.c_str() << std::endl;
 
-
-
-
-
-
-
-
+  std::string tmp("echo");
+  std::cout << tmp.c_str() << std::endl;
+  for (int i = 0; i < 5; i++)
+  {
+    int a = -1;
+    this->findCmd(&a, &tmp, true, true);
+    std::cout << i << ": " << a <<std::endl;
+  }
 
 }

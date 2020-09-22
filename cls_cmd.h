@@ -37,7 +37,7 @@ class CMD_HANDLER
      * continueFind - продолжить поиск (true), или начать сначала (false)
      * return - true если найдена команда, которая удовлетворяет маске
      */
-    bool findCmd(int * const ind, const std::string * const *cmd_mask, bool continueFind);
+    bool findCmd(int * const ind, const std::string * const cmd_mask, bool compliteCoincidence, bool continueFind);
 
 
     /*! Поиск команды по маске среди введеных ранее
@@ -46,7 +46,7 @@ class CMD_HANDLER
      * continueFind - продолжить поиск (true), или начать сначала (false)
      * return - true если найдена команда, которая удовлетворяет маске
      */
-    bool findToLegend(int * const ind, const std::string * const *cmd_mask, bool continueFind);
+    bool findToLegend(int * const ind, const std::string * const *cmd_mask, bool compliteCoincidence, bool continueFind);
 
     //! Запуск команды c индексом (номером) ind. \Соотвествующий индекс можно получить в findCmd
     void callCmd(const int ind);
@@ -67,7 +67,8 @@ class CMD_HANDLER
 
     // TODO (#7) можно перейти на динамический массив
     CMD_LIST cmd[_CFG_NUM_CMD_MAX_];
-
+    // номер команды с которой будет продолжен поиск ( в случае, если будет запрос именно продолжить поиск)
+    int i_cmd;
 
     // фактическое кол-во команд
     int Ncmd;
