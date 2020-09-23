@@ -24,6 +24,7 @@ public:
 
 private:
   std::string log[_CFG_LEGEND_SIZE_];
+  std::string tmp_buff;
   unsigned long counter;
   int i_next;
   int i_offset;

@@ -22,6 +22,7 @@ CMD_LOG     cmd_log;
 
 CMD_LOG::CMD_LOG()
 {
+  tmp_buff = "";
   i_offset = 0;
   i_next = 0;
   counter = 0;
@@ -40,23 +41,25 @@ void CMD_LOG::append(const std::string * const s)
 
   counter++;
   log[i_next] = *s;
-
-  i_offset = 0;
-  i_log = i_next;
   i_next++;
   if (i_next >= _CFG_LEGEND_SIZE_)
     i_next = 0;
+
+  i_offset = 0;
+  i_log = i_next;
+
+  tmp_buff = "";
 }
 
 bool CMD_LOG::get_previous(std::string * const s)
 {
   if (i_offset == 0)
   {
-    append(s);
+    tmp_buff = *s;
   }
   i_offset--;
   // проверка на случай того, что список лога закончился
-  if (i_offset == -_CFG_LEGEND_SIZE_ || abs(i_offset) == counter )
+  if (i_offset == -_CFG_LEGEND_SIZE_ || abs(i_offset) > counter )
   {
     i_offset++;
     return false;
@@ -70,16 +73,20 @@ bool CMD_LOG::get_previous(std::string * const s)
 
 bool CMD_LOG::get_next(std::string * const s)
 {
+  i_offset++;
   if (i_offset < 0)
   {
-    i_offset++;
     i_log = (i_log < (_CFG_LEGEND_SIZE_ - 1)) ? i_log + 1 : 0;
     *s = log[i_log];
     return true;
   }
   else
-    return false;
-
+  {
+    i_offset = 0;
+    if( tmp_buff.length() > 0)
+      *s = tmp_buff;
+    return true;
+  }
 }
 
 
