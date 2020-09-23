@@ -17,6 +17,70 @@ extern VOID ErrorExit (const char * const err_msg);
 //}
 
 CMD_HANDLER cmd_handler;
+CMD_LOG     cmd_log;
+
+
+CMD_LOG::CMD_LOG()
+{
+  i_offset = 0;
+  i_next = 0;
+  counter = 0;
+  i_log = 0;
+}
+
+void CMD_LOG::append(const std::string * const s)
+{
+  int i_last = i_next - 1;
+  if (i_last < 0)
+    i_last = _CFG_LEGEND_SIZE_ - 1;
+
+  // защита от спама: т.е. записи на 100% одинаковых команд
+  if (s->compare(log[i_last]) == 0 )
+    return;
+
+  counter++;
+  log[i_next] = *s;
+
+  i_offset = 0;
+  i_log = i_next;
+  i_next++;
+  if (i_next >= _CFG_LEGEND_SIZE_)
+    i_next = 0;
+}
+
+bool CMD_LOG::get_previous(std::string * const s)
+{
+  if (i_offset == 0)
+  {
+    append(s);
+  }
+  i_offset--;
+  // проверка на случай того, что список лога закончился
+  if (i_offset == -_CFG_LEGEND_SIZE_ || abs(i_offset) == counter )
+  {
+    i_offset++;
+    return false;
+  }
+
+  i_log = (i_log > 0) ? i_log - 1 : _CFG_LEGEND_SIZE_ - 1;
+
+  *s = log[i_log];
+  return true;
+}
+
+bool CMD_LOG::get_next(std::string * const s)
+{
+  if (i_offset < 0)
+  {
+    i_offset++;
+    i_log = (i_log < (_CFG_LEGEND_SIZE_ - 1)) ? i_log + 1 : 0;
+    *s = log[i_log];
+    return true;
+  }
+  else
+    return false;
+
+}
 
 
 //! функция для упорядовачивания списка команд. чтобы не захломлять класс, вынес её отдельно
@@ -41,6 +105,15 @@ CMD_HANDLER::~CMD_HANDLER()
 }
 
 
+
+void CMD_HANDLER::print_cmd_list()
+{
+  std::cout << "cmd list:\n";
+  for (int i = 0; i < Ncmd; i++)
+    std::cout << cmd[i].name.c_str() << " - " << cmd[i].help.c_str() << std::endl;
+}
+
+
 /*! Поиск команды по маске
  * ind - возврращается номер найденной команды, который удовлетворяет заданной маске
  * cmd_mask - строка, которая содержит маску для поиска команды ( например, если маска = "get", то строка "getXYZ" - подходит под указанную маску)
@@ -49,7 +122,6 @@ CMD_HANDLER::~CMD_HANDLER()
  */
 bool CMD_HANDLER::findCmd(int * const ind, const std::string * const cmd_mask, bool compliteCoincidence, bool continueFind)
 {
-  bool retval = false;
   size_t lenmask = cmd_mask->length();
 
   if (continueFind == false)
@@ -66,7 +138,6 @@ bool CMD_HANDLER::findCmd(int * const ind, const std::string * const cmd_mask, b
     {
       if ( (compliteCoincidence && lenmask == this->cmd[this->i_cmd].name.length() ) || !compliteCoincidence)
       {
-        retval = true;
         *ind = this->i_cmd;
         this->i_cmd++; // на случай, если в следующем заходе надо будет проболжить поиск, то мы продолжим со следующего эл-та
         return true;
@@ -151,9 +222,9 @@ bool CMD_HANDLER::init(const std::string * const f_ini)
 
   std::sort(this->cmd, this->cmd + this->Ncmd, func_cmptoini);
 
-  std::cout << "cmd list:\n";
-  for (int i = 0; i < Ncmd; i++)
-    std::cout << cmd[i].name.c_str() << " - " << cmd[i].help.c_str() << std::endl;
-  std::cout << "---------------------------" << std::endl;
 
+  print_cmd_list();
+
+  // TODO (#9) можно вернуть false если что то не так
+  return true;
 }

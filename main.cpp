@@ -14,15 +14,8 @@ COORD GetConsoleCursorPosition(HANDLE hConsoleOutput);
 VOID ErrorExit(const char * const);
 // Конфигурация проекта
 void init_prj(std::string *f_ini, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min);
-/* сравнить строку (введенную пользователем) с командой номер i.
- * return значение strncmp, полученное при сравнении первых pstr->length() символов строки и команды номер i
-*/
-int strcmdncmp(const std::string * const pstr, const int i, const std::string * const pfname);
-// Получить кол-во цифр десятичного числа
-int nDig(int N)
-{
-  return (N == 0) ? 1 : log10(abs(N)) + 1;
-}
+// удаление содержимого строки
+void line_clc(std::string  &str, HANDLE &hStdout, int &pos_X_min);
 
 //}
 //}
@@ -90,12 +83,18 @@ int main(int argc, char *argv[])
     {
       case VK_UP:
       {
-        // TODO (#6) UP log prc
+        std::string str_copy = cmd_str;
+        line_clc(str_copy, hStdout, pos_X_min);
+        cmd_log.get_previous(&cmd_str);
+        std::cout << cmd_str;
         break;
       }
       case VK_DOWN:
       {
-        // TODO(#6) DOWN log prc
+        std::string str_copy = cmd_str;
+        line_clc(str_copy, hStdout, pos_X_min);
+        cmd_log.get_next(&cmd_str);
+        std::cout << cmd_str;
         break;
       }
       case VK_LEFT: // перемещение по строке влево
@@ -125,6 +124,13 @@ int main(int argc, char *argv[])
       }
       case VK_TAB:
       {
+        if (cmd_str.length() == 0)
+        {
+          // если строка пустая, то просто выводим список команд
+          cmd_handler.print_cmd_list();
+          break;
+        }
+
         if (flag_previous_tab_prc) // если таб был нажат ранее, то предыдущий вариант удаляем
         {
           int p_start = cmd_str.length();
@@ -164,21 +170,14 @@ int main(int argc, char *argv[])
       }
       case VK_DELETE: // удаляем всё строку
       {
-        std::string str_clr(cmd_str.length(), ' ');
-        position   = GetConsoleCursorPosition(hStdout);
-        position.X = pos_X_min;
-        SetConsoleCursorPosition(hStdout, position);
-
-        std::cout << str_clr;
-        position.X = pos_X_min;
-        SetConsoleCursorPosition(hStdout, position);
-
-        cmd_str.clear();
-
+        line_clc(cmd_str, hStdout, pos_X_min);
         break;
       }
       case VK_RETURN: // (Enter). Обрабатываем введенные данные
       {
+        // добовляем символы в лог
+        cmd_log.append(&cmd_str);
+
         position   = GetConsoleCursorPosition(hStdout);
         position.X = 0;
         position.Y += 1;
@@ -305,28 +304,17 @@ void init_prj(std::string *f_ini, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_mi
 }
 
 
-
-/* сравнить строку (введенную пользователем) с командой номер i.
- * return значение strncmp, полученное при сравнении первых pstr->length() символов строки и команды номер i
-*/
-int strcmdncmp(const std::string * const pstr, const int i, const std::string * const pfname)
+// удаление содержимого строки
+void line_clc(std::string  &str, HANDLE &hStdout, int &pos_X_min)
 {
-  const int size_of_arr = 20;  //
-  // Проверка на прохождение ограничения на максимальный номер команды. 5 - это на 'c', 'm', 'd', ' ', '\0'.
-  if (  nDig(i) <  (size_of_arr - 5) )  // мне кажется, что проверка лишняя. 1e15 - 1 команд вполне хватит для всего... Пусть пока останется.
-  {
-    ErrorExit("call strcmdncmp");
-  }
+  std::string str_clr(str.length(), ' ');
+  COORD position   = GetConsoleCursorPosition(hStdout);
+  position.X = pos_X_min;
+  SetConsoleCursorPosition(hStdout, position);
 
-  char cmd_section[size_of_arr];
-  sprintf(cmd_section, "cmd %d", i);  // формируем следующей секции для поиска команды
+  std::cout << str_clr;
+  position.X = pos_X_min;
+  SetConsoleCursorPosition(hStdout, position);
 
-  const int buff_size = 200;                        // инициализируем буфер, в который будем складывать результаты поиска
-  char buff[buff_size];
-  // дастаем имя команды из cmd X
-  GetPrivateProfileString(cmd_section, "name", "", buff, buff_size, pfname->c_str());
-
-  return strncmp(buff, pstr->c_str(), pstr->length());
+  str.clear();
 }
-
-
