@@ -1,3 +1,3 @@
 @echo off
-call %~dp0..\bin\Release\cmd_interface.exe 2> %~dp0err.txt
+call %~dp0cmd_interface.exe ./example.ini 2>err.txt
 pause
