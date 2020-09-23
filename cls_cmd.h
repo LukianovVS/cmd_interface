@@ -12,6 +12,17 @@
 #define _CFG_LEGEND_SIZE_ 20
 
 
+// TODO (#4) надо продумать класс CMD_LOG
+//class CMD_LOG
+//{
+//public:
+//  void append(const std::string * const s)
+//  bool get(int i);
+//private:
+//
+//};
+
+
 class CMD_LIST
 {
 public:
@@ -39,14 +50,8 @@ class CMD_HANDLER
      */
     bool findCmd(int * const ind, const std::string * const cmd_mask, bool compliteCoincidence, bool continueFind);
 
+    inline void reset_find_ind() {i_cmd = 0;}
 
-    /*! Поиск команды по маске среди введеных ранее
-     * ind - возврращается номер найденной команды, который удовлетворяет заданной маске
-     * cmd_mask - строка, которая содержит маску для поиска команды ( например, если маска = "get", то строка "getXYZ" - подходит под указанную маску)
-     * continueFind - продолжить поиск (true), или начать сначала (false)
-     * return - true если найдена команда, которая удовлетворяет маске
-     */
-    bool findToLegend(int * const ind, const std::string * const *cmd_mask, bool compliteCoincidence, bool continueFind);
 
     //! Запуск команды c индексом (номером) ind. \Соотвествующий индекс можно получить в findCmd
     void callCmd(const int ind, std::string *args);
@@ -55,14 +60,9 @@ class CMD_HANDLER
      */
     bool init(const std::string * const f_ini);
 
-
+    bool getName(std::string * const str, int ind);
 
   private:
-
-    /*! поиск строки по маске
-     *
-     */
-    bool findstr(int * const ind, const std::string * const *cmd_mask, const std::string * const  str_arr, int * const i, const int N);
 
 
     // TODO (#7) можно перейти на динамический массив
@@ -72,9 +72,6 @@ class CMD_HANDLER
 
     // фактическое кол-во команд
     int Ncmd;
-
-    // путь, относительно которого указаны команды
-    std::string cmd_path;
 
     std::string legend[_CFG_LEGEND_SIZE_];
 };

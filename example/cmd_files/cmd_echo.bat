@@ -1,2 +1,3 @@
-@echo It is test
-@timeout 2
+@echo off 
+set str1=%1
+echo Your string is "%str1%"

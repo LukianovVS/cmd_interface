@@ -13,7 +13,7 @@ COORD GetConsoleCursorPosition(HANDLE hConsoleOutput);
 // выход с ошибкой
 VOID ErrorExit(const char * const);
 // Конфигурация проекта
-void init_prj(std::string *f_ini, std::string *cmd_path, int *Num_cmd, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min);
+void init_prj(std::string *f_ini, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min);
 /* сравнить строку (введенную пользователем) с командой номер i.
  * return значение strncmp, полученное при сравнении первых pstr->length() символов строки и команды номер i
 */
@@ -31,15 +31,16 @@ int nDig(int N)
 
 int main(int argc, char *argv[])
 {
-  int pos_X_min = 2;          // отступ от начала строки
-  COORD position;             // позиция на консоли
-  bool flg_loop = true;       // программа работает в цикле до сброса флага
-  std::string cmd_str = "";   // строка с введеной командой
-  HANDLE hStdin;              // устройство stdin
-  HANDLE hStdout;             // устройство stdout
-  INPUT_RECORD irInBuf;       // Класс для обработки событий. В данном случае, для обработки событий с клавиатуры
-  DWORD cNumRead;             // Сюда будет записано кол-во принятых событий
-
+  int pos_X_min = 2;                        // отступ от начала строки
+  COORD position;                           // позиция на консоли
+  bool flg_loop = true;                     // программа работает в цикле до сброса флага
+  std::string cmd_str = "";                 // строка с введеной командой
+  HANDLE hStdin;                            // устройство stdin
+  HANDLE hStdout;                           // устройство stdout
+  INPUT_RECORD irInBuf;                     // Класс для обработки событий. В данном случае, для обработки событий с клавиатуры
+  DWORD cNumRead;                           // Сюда будет записано кол-во принятых событий
+  bool flag_previous_tab_prc = false;       // флаг обработки на предыдущем шаге клавиши tab
+  std::string cmd_str_tab="";               // временная строка, которая создается при обработке tab
 
 
 
@@ -50,14 +51,9 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  // TODO (#1) ини файл надо прочесть 1 раз и на его основе создать упорядоченный список команд. Упорядоченный список бужет полезен при обработке клавиши tab
-  // Для того ухоодим в ветку девелоп
-
   std::string f_ini(argv[1]);       // сохраняем путь к ini файлу (файл со списком команд)
-  std::string cmd_path("");         // путь, относительно которых заданы команды в ini файле
-  int Num_cmd = 0;                  // кол-во команд
   // initialization
-  init_prj(&f_ini, &cmd_path, &Num_cmd, hStdin, hStdout, pos_X_min);
+  init_prj(&f_ini, hStdin, hStdout, pos_X_min);
 
 
   do
@@ -79,6 +75,16 @@ int main(int argc, char *argv[])
     //не обрабатываем пока клавиша нажата. Исключение - нажат shift
     if(irInBuf.Event.KeyEvent.bKeyDown && !(irInBuf.Event.KeyEvent.dwControlKeyState & ( SHIFT_PRESSED) ) )
       continue;
+
+    if (flag_previous_tab_prc)                               // если на предыдущем шаге была результативно обработа клавиша tab
+    {
+      if (irInBuf.Event.KeyEvent.wVirtualKeyCode != VK_TAB) // при этом текущая клавиша != tab
+      {
+        cmd_handler.reset_find_ind();                       // обнуляем стартовую позицию поиска команды (слкдующий поиск начнется с нуля, а не продолжится)
+        cmd_str = cmd_str_tab;
+        flag_previous_tab_prc = false;                      // сбрасываем флаг
+      }
+    }
     // обраротка клавиши, на основе чтения таблицы "Virtual-Key Codes"
     switch (irInBuf.Event.KeyEvent.wVirtualKeyCode)
     {
@@ -119,33 +125,26 @@ int main(int argc, char *argv[])
       }
       case VK_TAB:
       {
-        // TODO (#3): Сейчас обработка VK_TAB происходит не очень красиво. Надо:
-        // 1. выводить разные варианты комант при нажитии tab несколько раз подряд
-        // 2. выводить подсказку если строка пустая
-        // 3. Т.к. обработчик очень схож с тем, что происходит при нажатии Enter надо создать общую функцию
-        static int i_find = Num_cmd;
-        int strLen = cmd_str.length();
-        for (int i = 0; i < Num_cmd; i++)
+        if (flag_previous_tab_prc) // если таб был нажат ранее, то предыдущий вариант удаляем
         {
-          i_find++;
-          if (i_find >= Num_cmd)
-            i_find -= Num_cmd;
-          std::string cmd_section("cmd ");                  // формируем имя следующей секции для поиска команды
-          cmd_section += std::to_string(i_find + 1);
-          const int buff_size = 200;                        // инициализируем буфер, в который будем складывать результаты поиска
-          char buff[buff_size];
-          // дастаем имя команды из cmd X
-          GetPrivateProfileString(cmd_section.c_str(), "name", "", buff, buff_size, f_ini.c_str());
-          // сравневаем полученное имя с тем, что ввел пользователь
-          if ( !strncmp(buff, cmd_str.c_str(), strLen) )
-          {
-            if (strlen(buff) > strLen)
-            {
-              cmd_str.append(&buff[strLen]);
-              std::cout << &buff[strLen];
-              break;
-            }
-          }
+          int p_start = cmd_str.length();
+          int p_stop  = cmd_str_tab.length();
+
+          position = GetConsoleCursorPosition(hStdout);
+          position.X = pos_X_min + p_start;
+          SetConsoleCursorPosition(hStdout, position);
+
+          for (int i = p_start; i < p_stop; i++)
+            std::cout << " ";
+          SetConsoleCursorPosition(hStdout, position);
+        }
+
+        int ind_cmd = -1;
+        if ( cmd_handler.findCmd(&ind_cmd, &cmd_str, false, true) )
+        {
+          cmd_handler.getName(&cmd_str_tab, ind_cmd);
+          std::cout << &cmd_str_tab[cmd_str.length()];
+          flag_previous_tab_prc = true;
         }
         break;
       }
@@ -204,34 +203,12 @@ int main(int argc, char *argv[])
         std::cout << "cmd: "<<comand_name<< std::endl;
         std::cout << "arg: "<<comand_args<< std::endl;
 
-        bool f_cmd_found = false;                           // признак того, что введенная команда найдена
-        for (int i = 0; i < Num_cmd; i++)                   // бежим по списку команд
+        int ind_cmd = -1;
+        if (cmd_handler.findCmd(&ind_cmd, &comand_name, true, false))
         {
-          std::string cmd_section("cmd ");                  // формируем имя следующей секции для поиска команды
-          cmd_section += std::to_string(i + 1);
-          const int buff_size = 200;                        // инициализируем буфер, в который будем складывать результаты поиска
-          char buff[buff_size];
-          // дастаем имя команды из cmd X
-          GetPrivateProfileString(cmd_section.c_str(), "name", "", buff, buff_size, f_ini.c_str());
-          // сравневаем полученное имя с тем, что ввел пользователь
-          if ( strlen(buff) == comand_name.length() && !strcmp(buff, comand_name.c_str()) )
-          {
-            // достаем путь к исполняемому файлу, который вызывает введенная команда
-            GetPrivateProfileString(cmd_section.c_str(), "comand", "", buff, buff_size, f_ini.c_str());
-            std::string system_cmd(cmd_path);
-            std::cout << "cmd: " << system_cmd << std::endl;
-            std::cout << "buff: " << buff << std::endl;
-            system_cmd.append(buff);
-            std::cout << "cmd: " << system_cmd << std::endl;
-            system_cmd.append(comand_args);
-            std::cout << "cmd: " << system_cmd << std::endl;
-            system(system_cmd.c_str());
-            f_cmd_found = true;
-            break;
-          }
+          cmd_handler.callCmd(ind_cmd, &comand_args);
         }
-
-        if (f_cmd_found == false)
+        else
         {
           // TODO (#5): надо обработь отсуствие команды более серьёзно
           std::cout << "yuar comand don't found: '" << cmd_str << "'" << std::endl;
@@ -304,35 +281,10 @@ VOID ErrorExit (const char * const err_msg)
 
 
 
-void init_prj(std::string *f_ini, std::string *cmd_path, int *Num_cmd, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min)
+void init_prj(std::string *f_ini, HANDLE &hStdin, HANDLE &hStdout, int &pos_X_min)
 {
-
-  // все команды заданы относительно ini файла (dbg).
-  int i = f_ini->find_last_of('/\\');
-  cmd_path->append(".\\");
-  cmd_path->append(*f_ini, 0, i + 1);
-
-  // Получаем кол-во секций в ini файле.
-  const int size_buff = 200;
-  char buff[size_buff + 1];             // все секции будут записаны в этот буфер
-  int N = GetPrivateProfileSectionNames(buff, size_buff, f_ini->c_str());
-  for (int i = 0; i < N; i++)
-  {
-    if (buff[i] == '\0')        // все секции разделены в буфере символом конца строки. Есть новый символ конца строки -> счетчик кол-ва секций++
-      (*Num_cmd)++;
-  }
-
-  // первая секция - спецификация
-  (*Num_cmd)--;
-
+  // читаем ini файл, формируем список команд
   cmd_handler.init(f_ini);
-
-  // dbg info:
-  std::cout << "f ini: " << f_ini->c_str()    << std::endl;
-  std::cout << "path:  " << cmd_path->c_str() << std::endl;
-  std::cout << "Num cmd:  " << *Num_cmd << std::endl;
-
-
 
   pos_X_min = 2;
 
